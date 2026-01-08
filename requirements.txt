@@ -1,0 +1,6 @@
+pypdf
+transformers
+torch
+faiss-cpu
+fastapi
+uvicorn
