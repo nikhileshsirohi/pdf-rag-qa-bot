@@ -1,4 +1,4 @@
-import re
+import re #regular expressions module
 
 def split_text(
     text: str,
