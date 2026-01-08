@@ -37,9 +37,16 @@ class EmbeddingGenerator:
 
         with torch.no_grad():
             model_output = self.model(**encoded)
+            # Transformers can output:
+                # token embeddings
+                # pooled embeddings
+                # attentions
+                # hidden layers
+                # loss (if labels provided)
 
         # Mean pooling with attention mask
         token_embeddings = model_output.last_hidden_state
+        # last_hidden_state, which gives contextual embeddings for every token.
         attention_mask = encoded["attention_mask"].unsqueeze(-1)
 
         embeddings = (token_embeddings * attention_mask).sum(dim=1)
