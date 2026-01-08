@@ -25,12 +25,6 @@ class EmbeddingGenerator:
         Returns:
             torch.Tensor: tensor of embeddings
         """
-        encoded_input = self.tokenizer(
-            texts,
-            padding=True,
-            truncation=True,
-            return_tensors="pt"
-        )
 
         encoded = self.tokenizer(
             texts,
