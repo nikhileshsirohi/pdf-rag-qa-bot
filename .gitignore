@@ -1,0 +1,6 @@
+__pycache__/
+.env
+*.faiss
+*.pkl
+vector_store/
+data/raw_pdfs/
