@@ -7,23 +7,27 @@ from app.rag_pipeline import RAGPipeline
 
 pdf_path = "data/raw_pdfs/sample.pdf"
 
-# Load & chunk PDF
+# Load and chunk
 text = load_pdf(pdf_path)
 chunks = split_text(text)
 
-# Generate embeddings
+# Embed chunks
 embedder = EmbeddingGenerator()
 chunk_embeddings = embedder.embed_texts(chunks).numpy()
 
-# Create FAISS retriever
+# Create FAISS index
 retriever = FAISSRetriever(embedding_dim=chunk_embeddings.shape[1])
 retriever.add_embeddings(chunk_embeddings, chunks)
 
-# Create RAG pipeline
-rag = RAGPipeline(retriever)
+# -------- CHOOSE PROVIDER HERE --------
+rag = RAGPipeline(
+    retriever=retriever,
+    provider="huggingface",   # "openai" | "gemini" | "huggingface"
+    api_key=None,             # required only for openai/gemini
+    model=None                # optional override
+)
 
-# Ask question
-question = "What is this document about?"
+question = "What is Machine Learning?"
 answer = rag.answer_question(question)
 
 print("Question:", question)

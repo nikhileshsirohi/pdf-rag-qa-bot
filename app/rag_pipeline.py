@@ -1,6 +1,6 @@
 from app.embeddings import EmbeddingGenerator
 from app.retriever import FAISSRetriever
-
+from app.llm_providers import get_llm_provider
 
 class RAGPipeline:
     """
@@ -11,9 +11,22 @@ class RAGPipeline:
     - LLM generation
     """
 
-    def __init__(self, retriever: FAISSRetriever):
+    def __init__(
+        self,
+        retriever: FAISSRetriever,
+        provider: str = "huggingface",
+        api_key: str | None = None,
+        model: str | None = None
+    ):
         self.retriever = retriever
         self.embedder = EmbeddingGenerator()
+
+        # Initialize LLM provider dynamically
+        self.llm = get_llm_provider(
+            provider=provider,
+            api_key=api_key,
+            model=model
+        )
 
     def build_prompt(self, context_chunks: list[str], question: str) -> str:
         """
@@ -55,6 +68,16 @@ ANSWER:
 
         if not results:
             return "No relevant information found."
+        
+        for i, r in enumerate(results):
+            print(f"Result {i} | Score: {r['score']:.4f}")
+
+        # 🔑 RELEVANCE CHECK
+        best_score = results[0]["score"]
+        
+        if best_score < 0.3:   # threshold (tunable)
+            return "The provided document does not contain information related to your question."
+
 
         context_chunks = [res["text"] for res in results]
 
@@ -62,16 +85,16 @@ ANSWER:
         prompt = self.build_prompt(context_chunks, question)
 
         # Step 4: Call LLM (mocked here)
-        answer = self.call_llm(prompt)
+        answer = self.llm.generate(prompt)
 
         return answer
 
-    def call_llm(self, prompt: str) -> str:
-        """
-        This function represents the LLM call.
-        Replace this with OpenAI / Gemini / LLaMA later.
-        """
+    # def call_llm(self, prompt: str) -> str:
+    #     """
+    #     This function represents the LLM call.
+    #     Replace this with OpenAI / Gemini / LLaMA later.
+    #     """
 
-        # For now, we just return the prompt end to show flow
-        # In real use, this will call an API
-        return "[LLM RESPONSE WILL APPEAR HERE]"
+    #     # For now, we just return the prompt end to show flow
+    #     # In real use, this will call an API
+    #     return "[LLM RESPONSE WILL APPEAR HERE]"

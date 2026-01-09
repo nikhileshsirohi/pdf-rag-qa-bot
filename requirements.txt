@@ -4,3 +4,7 @@ torch
 faiss-cpu
 fastapi
 uvicorn
+
+# Optional providers
+openai
+google-genai
