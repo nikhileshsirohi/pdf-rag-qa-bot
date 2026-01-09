@@ -1,11 +1,12 @@
 """
-We will:
-use FAISS IndexFlatIP (cosine similarity)
-normalize embeddings
-store:
-    FAISS index
-    chunk texts
-    metadata (optional later) 
+FAISS stores only embeddings.
+FAISS automatically assigns IDs: 0, 1, 2, … in the order you add vectors.
+
+During search:
+	•	FAISS returns (scores, indices)
+	•	indices[i] tells you which embedding matched
+	•	You use that index to fetch the corresponding text from self.chunks
+
 """
 
 import faiss
@@ -73,7 +74,8 @@ class FAISSRetriever:
         # Perform FAISS search
         # scores: similarity values
         # indices: index positions of matched vectors
-
+        # print(f"Scores: {scores}") # Scores: [[0.42406178 0.33950064 0.3065765 ]]
+        # print(f"Indices: {indices}") # Indices: [[17 16 18]]
         results = []
         for score, idx in zip(scores[0], indices[0]):
             if idx < len(self.chunks):

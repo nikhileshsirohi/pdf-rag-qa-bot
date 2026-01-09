@@ -15,9 +15,7 @@ print(f"Total chunks: {len(chunks)}")
 # Step 2: Generate embeddings
 embedder = EmbeddingGenerator()
 chunk_embeddings = embedder.embed_texts(chunks).numpy()
-print("Chunks & Chunbks embeddings")
-print(chunks[0][:50])
-print(chunk_embeddings[0][:10])  # Print first 10 values of first embedding
+
 # Step 3: Create FAISS index
 retriever = FAISSRetriever(embedding_dim=chunk_embeddings.shape[1])
 retriever.add_embeddings(chunk_embeddings, chunks)
