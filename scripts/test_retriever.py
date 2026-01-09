@@ -1,4 +1,3 @@
-import numpy as np
 from app.pdf_loader import load_pdf
 from app.text_splitter import split_text
 from app.embeddings import EmbeddingGenerator
@@ -6,28 +5,30 @@ from app.retriever import FAISSRetriever
 
 pdf_path = "data/raw_pdfs/sample.pdf"
 
-# Step 1: Load and chunk PDF
+# Load & chunk
 text = load_pdf(pdf_path)
 chunks = split_text(text)
 
-print(f"Total chunks: {len(chunks)}")
-
-# Step 2: Generate embeddings
+# Embed
 embedder = EmbeddingGenerator()
-chunk_embeddings = embedder.embed_texts(chunks).numpy()
+embeddings = embedder.embed_texts(chunks).numpy()
 
-# Step 3: Create FAISS index
-retriever = FAISSRetriever(embedding_dim=chunk_embeddings.shape[1])
-retriever.add_embeddings(chunk_embeddings, chunks)
+# Create retriever and add embeddings
+retriever = FAISSRetriever(embedding_dim=embeddings.shape[1])
+retriever.add_embeddings(embeddings, chunks)
 
-# Step 4: Query
+# SAVE INDEX
+retriever.save()
+
+print("Index saved successfully!")
+
+# Reload retriever (simulate restart)
+retriever2 = FAISSRetriever(embedding_dim=embeddings.shape[1])
+
+# Query
 query = "What is this document about?"
 query_embedding = embedder.embed_texts([query]).numpy()
+results = retriever2.search(query_embedding)
 
-results = retriever.search(query_embedding, top_k=3)
-
-print("\nTop retrieved chunks:\n")
-for i, res in enumerate(results, 1):
-    print(f"Result {i} (score={res['score']:.3f})")
-    print(res["text"][:300])
-    print("-" * 60)
+print("Retrieved after reload:")
+print(results[0]["text"][:300])
