@@ -23,6 +23,17 @@
 
 <div class="box">
 
+  <!-- ✅ PDF UPLOAD -->
+  <div class="row">
+    <label>Upload PDF:</label><br/>
+    <input type="file" id="pdfFile" accept="application/pdf" />
+    <button id="uploadBtn" onclick="uploadPdf()" disabled>Upload & Index</button>
+    <div class="hint">Upload a PDF once. It will be chunked, embedded, and added to FAISS.</div>
+    <div id="uploadMsg" class="hint"></div>
+  </div>
+
+  <hr/>
+
   <div class="row">
     <label>Choose Model Provider:</label><br/>
     <select id="provider">
@@ -30,7 +41,7 @@
       <option value="openai">OpenAI</option>
       <option value="gemini">Gemini</option>
     </select>
-    <div class="hint">OpenAI/Gemini require an API key. Hugging Face here is assumed local/no key.</div>
+    <div class="hint">OpenAI/Gemini require an API key.</div>
   </div>
 
   <div class="row">
@@ -65,21 +76,23 @@
 <pre id="answer"></pre>
 
 <script>
-  // Simple defaults; adjust to match your backend/provider support.
-const MODELS = {
-  huggingface: [
-    { value: "", label: "Default (google/flan-t5-base)" }
-  ],
-  openai: [
-    { value: "gpt-4o-mini", label: "gpt-4o-mini (cheap/fast)" },
-    { value: "gpt-4o", label: "gpt-4o (stronger)" }
-  ],
-  gemini: [
-    { value: "models/gemini-flash-lite-latest", label: "Gemini Flash-Lite Latest (fastest)" },
-    { value: "models/gemini-flash-latest", label: "Gemini Flash Latest (fast)" },
-    { value: "models/gemini-pro-latest", label: "Gemini Pro Latest (stronger)" },
+  const API_BASE = "http://127.0.0.1:8000";
+
+  const MODELS = {
+    huggingface: [
+      { value: "", label: "Default (google/flan-t5-base)" },
+      { value: "google/flan-t5-base", label: "google/flan-t5-base" }
     ],
-};
+    openai: [
+      { value: "gpt-4o-mini", label: "gpt-4o-mini (cheap/fast)" },
+      { value: "gpt-4o", label: "gpt-4o (stronger)" }
+    ],
+    gemini: [
+      { value: "models/gemini-flash-lite-latest", label: "models/gemini-flash-lite-latest (fastest)" },
+      { value: "models/gemini-flash-latest", label: "models/gemini-flash-latest (fast)" },
+      { value: "models/gemini-pro-latest", label: "models/gemini-pro-latest (stronger)" }
+    ],
+  };
 
   const providerEl = document.getElementById("provider");
   const apiKeyEl = document.getElementById("apiKey");
@@ -91,6 +104,11 @@ const MODELS = {
   const statusEl = document.getElementById("status");
   const apiKeyHintEl = document.getElementById("apiKeyHint");
   const modelHintEl = document.getElementById("modelHint");
+
+  // Upload elements
+  const pdfFileEl = document.getElementById("pdfFile");
+  const uploadBtn = document.getElementById("uploadBtn");
+  const uploadMsgEl = document.getElementById("uploadMsg");
 
   function requiresApiKey(provider) {
     return provider === "openai" || provider === "gemini";
@@ -108,6 +126,11 @@ const MODELS = {
     answerEl.textContent = msg || "";
   }
 
+  function setUploadMsg(msg, isError=false) {
+    uploadMsgEl.className = isError ? "error" : "success";
+    uploadMsgEl.textContent = msg || "";
+  }
+
   function fillModelDropdown(provider) {
     modelEl.innerHTML = "";
     const items = MODELS[provider] || [{ value: "", label: "Default" }];
@@ -119,13 +142,12 @@ const MODELS = {
       modelEl.appendChild(opt);
     }
 
-    // Optional hints
     if (provider === "huggingface") {
       modelHintEl.textContent = "Using local/default HF model unless your backend supports changing it.";
     } else if (provider === "openai") {
-      modelHintEl.textContent = "Choose an OpenAI model. Make sure your API key has access/billing enabled.";
+      modelHintEl.textContent = "Choose an OpenAI model. Ensure billing/access is enabled.";
     } else if (provider === "gemini") {
-      modelHintEl.textContent = "Choose a Gemini model. Make sure your key is valid for the Gemini API.";
+      modelHintEl.textContent = "Choose a Gemini model. Model IDs here match your ListModels output.";
     } else {
       modelHintEl.textContent = "";
     }
@@ -137,18 +159,9 @@ const MODELS = {
     const needsKey = requiresApiKey(provider);
     const apiKey = apiKeyEl.value.trim();
 
-    // Enable/disable API key field
     apiKeyEl.disabled = !needsKey;
+    apiKeyHintEl.textContent = needsKey ? "API key is mandatory for OpenAI/Gemini." : "";
 
-    if (!needsKey) {
-      apiKeyHintEl.textContent = "";
-    } else {
-      apiKeyHintEl.textContent = "API key is mandatory for OpenAI/Gemini.";
-    }
-
-    // Button rules:
-    // - must have question
-    // - if provider needs key, must have key
     let valid = true;
     let msg = "";
 
@@ -174,9 +187,74 @@ const MODELS = {
   apiKeyEl.addEventListener("input", validateForm);
   questionEl.addEventListener("input", validateForm);
 
-  // Initialize UI on load
+  // ✅ Upload button enabled only when a PDF file is selected
+  pdfFileEl.addEventListener("change", () => {
+    setUploadMsg("", false);
+    const f = pdfFileEl.files?.[0];
+    uploadBtn.disabled = !(f && (f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")));
+    if (f && !f.name.toLowerCase().endsWith(".pdf")) {
+      setUploadMsg("Please select a .pdf file.", true);
+    }
+  });
+
+  // Initialize UI
   fillModelDropdown(providerEl.value);
   validateForm();
+
+  async function uploadPdf() {
+    setError("");
+    setUploadMsg("Uploading...", false);
+    uploadBtn.disabled = true;
+
+    const file = pdfFileEl.files?.[0];
+    if (!file) {
+      setUploadMsg("Please choose a PDF file first.", true);
+      uploadBtn.disabled = false;
+      return;
+    }
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      setUploadMsg("Only PDF files are allowed.", true);
+      uploadBtn.disabled = false;
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      // IMPORTANT: field name must match FastAPI param name: file
+      formData.append("file", file);
+
+      const resp = await fetch(`${API_BASE}/upload-pdf`, {
+        method: "POST",
+        body: formData
+      });
+
+      if (!resp.ok) {
+        let errText = `Upload failed (${resp.status})`;
+        try {
+          const errJson = await resp.json();
+          if (typeof errJson.detail === "string") errText = errJson.detail;
+          else if (errJson.detail) errText = JSON.stringify(errJson.detail, null, 2);
+          else errText = JSON.stringify(errJson, null, 2);
+        } catch (_) {
+          const raw = await resp.text();
+          if (raw) errText = raw;
+        }
+        setUploadMsg(errText, true);
+        return;
+      }
+
+      const data = await resp.json();
+      const msg = data.message || "PDF uploaded successfully";
+      const chunks = data.chunks_added != null ? ` (chunks added: ${data.chunks_added})` : "";
+      setUploadMsg(msg + chunks, false);
+    } catch (e) {
+      setUploadMsg("Network error: " + (e?.message || String(e)), true);
+    } finally {
+      // Re-enable if a valid file still selected
+      const f = pdfFileEl.files?.[0];
+      uploadBtn.disabled = !(f && (f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")));
+    }
+  }
 
   async function askQuestion() {
     setError("");
@@ -189,7 +267,6 @@ const MODELS = {
     const apiKey = apiKeyEl.value.trim();
     const model = modelEl.value || null;
 
-    // Final guard (in case user bypasses disabled button)
     if (!question) {
       setStatus("");
       setError("Question is required.");
@@ -211,36 +288,24 @@ const MODELS = {
         model: model || null
       };
 
-      const response = await fetch("http://127.0.0.1:8000/ask", {
+      const response = await fetch(`${API_BASE}/ask`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      // If backend returns non-2xx, show error body nicely
       if (!response.ok) {
         let errText = `Request failed (${response.status})`;
         try {
           const errJson = await response.json();
-          // FastAPI typically returns: { detail: ... }
           if (typeof errJson.detail === "string") errText = errJson.detail;
           else if (errJson.detail) errText = JSON.stringify(errJson.detail, null, 2);
           else errText = JSON.stringify(errJson, null, 2);
         } catch (_) {
-          // maybe plain text
           const raw = await response.text();
           if (raw) errText = raw;
         }
-
-        // Common “payment / key” hints (pure UI; actual message comes from backend)
-        const hint =
-          (provider === "openai")
-            ? "\n\nIf this is an API key/billing issue: check key validity + billing/payment method in your OpenAI account."
-            : (provider === "gemini")
-              ? "\n\nIf this is an API key issue: verify the key is for Gemini API and enabled in Google Cloud / AI Studio."
-              : "";
-
-        setError(errText + hint);
+        setError(errText);
         setStatus("");
         return;
       }
@@ -252,7 +317,7 @@ const MODELS = {
       setError("Network error: " + (err?.message || String(err)));
       setStatus("");
     } finally {
-      askBtn.disabled = false; // validateForm will re-disable if needed
+      askBtn.disabled = false;
       validateForm();
     }
   }
