@@ -62,7 +62,6 @@ You can:
 
 There is no need to upload the same file again.
 
-⸻
 
 ### Why not upload PDFs directly to ChatGPT or Gemini?
 
@@ -79,7 +78,6 @@ Uploading PDFs directly to an LLM is not scalable:
 - ***Context size stays small and efficient***
 - ***Knowledge is persistent and reusable***
 
-⸻
 
 ## How it works (RAG Pipeline)
 
@@ -88,7 +86,6 @@ Uploading PDFs directly to an LLM is not scalable:
 - ***Text is extracted from the document***
 - ***Text is split into semantic chunks (paragraph-sized)***
 
-⸻
 
 ### 2️⃣ Embedding Generation
 
@@ -125,11 +122,10 @@ When a user asks a question:
 ## Supported LLMs
 
 ### Free (Default)
-	•	Hugging Face
-	•	google/flan-t5-base
-	•	No API key required
+- Hugging Face
+- - google/flan-t5-base
+- - No API key required
 
-⸻
 
 ### Optional (Requires API Key)
 
@@ -146,10 +142,10 @@ Users can select the model from the UI.
 If no API key is provided, the system automatically falls back to the free Hugging Face model.
 
 ### Persistent Knowledge Base
-	•	PDFs are uploaded only once
-	•	FAISS index and text metadata are saved locally
-	•	Knowledge is reused across sessions
-	•	No repeated uploads required
+- PDFs are uploaded only once
+- FAISS index and text metadata are saved locally
+- Knowledge is reused across sessions
+- No repeated uploads required
 
 
 ## Author
