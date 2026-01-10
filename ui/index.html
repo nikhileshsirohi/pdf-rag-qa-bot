@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PDF RAG QA Bot</title>
+</head>
+<body>
+
+<h2>PDF RAG QA Bot</h2>
+
+<label>Choose Model:</label>
+<select id="provider">
+  <option value="huggingface">Hugging Face (google/flan-t5-base)</option>
+  <option value="openai">OpenAI</option>
+  <option value="gemini">Gemini</option>
+</select>
+
+<br><br>
+
+<label>API Key (optional):</label>
+<input type="password" id="apiKey" placeholder="Paste API key if needed"/>
+
+<br><br>
+
+<label>Model Name (optional):</label>
+<input type="text" id="model" placeholder="e.g. gpt-4o, gemini-1.5-pro"/>
+
+<br><br>
+
+<textarea id="question" rows="5" cols="60"
+  placeholder="Ask a question..."></textarea>
+
+<br><br>
+
+<button onclick="askQuestion()">Ask</button>
+
+<h3>Answer:</h3>
+<pre id="answer"></pre>
+
+<script>
+async function askQuestion() {
+  const response = await fetch("http://127.0.0.1:8000/ask", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      question: document.getElementById("question").value,
+      provider: document.getElementById("provider").value,
+      api_key: document.getElementById("apiKey").value || null,
+      model: document.getElementById("model").value || null
+    })
+  });
+
+  const data = await response.json();
+  document.getElementById("answer").textContent = data.answer;
+}
+</script>
+
+</body>
+</html>
