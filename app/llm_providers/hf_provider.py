@@ -7,7 +7,10 @@ class HuggingFaceProvider(BaseLLMProvider):
         self.pipe = pipeline(
             "text2text-generation",
             model=model_name,
-            max_new_tokens=256
+            max_new_tokens=256,
+            truncation=True,
+            repetition_penalty=1.2, 
+            do_sample=False  
         )
 
     def generate(self, prompt: str) -> str:

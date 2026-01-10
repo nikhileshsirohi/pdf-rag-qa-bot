@@ -33,14 +33,16 @@ class RAGPipeline:
         Build prompt for the LLM using retrieved chunks.
         """
 
-        context_text = "\n\n".join(context_chunks)
+        context_text = "\n\n".join(context_chunks[:2])
 
         prompt = f"""
-You are a helpful assistant.
-Answer the question using ONLY the context below.
-If the answer is not present in the context or not relevant to the question, say:
-"I could not find the answer in the provided document."
+You are an assistant answering questions strictly from the provided document.
 
+TASK:
+- Read the context
+- Summarize the answer in 3–4 clear sentences
+- Do NOT copy text verbatim
+- Do NOT repeat sentences
 CONTEXT:
 {context_text}
 
@@ -79,7 +81,7 @@ ANSWER:
             return "The provided document does not contain information related to your question."
 
 
-        context_chunks = [res["text"] for res in results]
+        context_chunks = [res["text"][:800] for res in results[:2]]
 
         # Step 3: Build prompt
         prompt = self.build_prompt(context_chunks, question)

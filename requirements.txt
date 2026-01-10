@@ -7,4 +7,5 @@ uvicorn
 
 # Optional providers
 openai
-google-genai 
+google-genai
+python-multipart

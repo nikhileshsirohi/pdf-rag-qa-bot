@@ -126,7 +126,7 @@ class FAISSRetriever:
         with open(self.meta_path, "wb") as f:
             pickle.dump(self.chunks, f)
 
-    def search(self, query_embedding: np.ndarray, top_k: int = 3):
+    def search(self, query_embedding: np.ndarray, top_k: int = 2):
         faiss.normalize_L2(query_embedding)
         scores, indices = self.index.search(query_embedding, top_k)
 
