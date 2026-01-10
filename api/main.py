@@ -54,16 +54,18 @@ def health_check():
 
 @app.post("/ask", response_model=AnswerResponse)
 def ask_question(request: QuestionRequest):
-    print(f"Received question: {request.question} using provider: {request.provider}")
-    llm = get_llm_provider(
-        provider=request.provider,
-        api_key=request.api_key,
-        model=request.model
-    )
-    rag.llm = llm
-    answer = rag.answer_question(request.question)
-    return {"answer": answer}
-
+    try:
+        llm = get_llm_provider(
+            provider=request.provider,
+            api_key=request.api_key,
+            model=request.model
+        )
+        rag.llm = llm
+        answer = rag.answer_question(request.question)
+        return {"answer": answer}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
 @app.post("/upload-pdf")
 def upload_pdf(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".pdf"):
